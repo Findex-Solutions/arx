@@ -19,7 +19,7 @@ package org.deidentifier.arx.examples;
 
 import java.io.IOException;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.deidentifier.arx.ARXPopulationModel;
 import org.deidentifier.arx.AttributeType;
 import org.deidentifier.arx.Data;

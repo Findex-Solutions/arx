@@ -23,7 +23,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -509,8 +508,6 @@ public class ImportWizardPageExcel extends WizardPage {
             
             stream = new FileInputStream(comboLocation.getText());
             workbook = WorkbookFactory.create(stream);
-        } catch (InvalidFormatException e) {
-            throw new IOException(Resources.getMessage("ImportWizardPageExcel.14")); //$NON-NLS-1$
         } catch (IllegalArgumentException e) {
             throw new IOException(Resources.getMessage("ImportWizardPageExcel.14")); //$NON-NLS-1$
         } catch (Exception e) {

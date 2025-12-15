@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Stack;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.deidentifier.arx.ARXLattice.ARXNode;
 import org.deidentifier.arx.ARXLattice.Anonymity;
 
@@ -274,7 +274,7 @@ public class XMLWriter {
 		this.append("<"); //$NON-NLS-1$
 		this.append(attribute);
 		this.append(">"); //$NON-NLS-1$
-		this.append(StringEscapeUtils.escapeXml(value));
+		this.append(StringEscapeUtils.escapeXml10(value));
 		this.append("</"); //$NON-NLS-1$
 		this.append(attribute);
         this.append(">"); //$NON-NLS-1$
