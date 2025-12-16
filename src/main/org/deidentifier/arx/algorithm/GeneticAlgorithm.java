@@ -16,6 +16,7 @@
  */
 package org.deidentifier.arx.algorithm;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -154,7 +155,8 @@ public class GeneticAlgorithm extends AbstractAlgorithm {
         this.geneticAlgorithmMutationProbability = geneticAlgorithmMutationProbability;
         this.geneticAlgorithmSubpopulationSize = geneticAlgorithmSubpopulationSize;
         this.geneticAlgorithmProductionFraction = geneticAlgorithmpProductionFraction;
-        this.random = geneticAlgorithmDeterministic ? new Random(0xDEADBEEF) : new Random();
+        // Use SecureRandom for better randomization quality in non-deterministic mode
+        this.random = geneticAlgorithmDeterministic ? new Random(0xDEADBEEF) : new SecureRandom();
     }
 
     @Override

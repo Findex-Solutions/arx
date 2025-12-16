@@ -1,13 +1,13 @@
 /*
  * ARX Data Anonymization Tool
  * Copyright 2012 - 2025 Fabian Prasser and contributors
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,20 +18,24 @@ package org.deidentifier.arx.gui.worker.io;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
 import java.io.ObjectStreamClass;
+
+import org.deidentifier.arx.io.SecureObjectInputStream;
 
 /**
  * This class handles compatibility issues with object deserialization
- * 
+ * and provides security against deserialization attacks by whitelisting
+ * allowed classes. Extends SecureObjectInputStream for core security
+ * functionality and adds backwards compatibility mapping for renamed classes.
+ *
  * @author Fabian Prasser
  */
-public class BackwardsCompatibleObjectInputStream extends ObjectInputStream {
+public class BackwardsCompatibleObjectInputStream extends SecureObjectInputStream {
 
     /**
      * Creates a new instance
-     * @param in
-     * @throws IOException
+     * @param in The input stream to read from
+     * @throws IOException if an I/O error occurs
      */
     public BackwardsCompatibleObjectInputStream(InputStream in) throws IOException {
         super(in);
@@ -39,7 +43,7 @@ public class BackwardsCompatibleObjectInputStream extends ObjectInputStream {
 
     @Override
     protected ObjectStreamClass readClassDescriptor() throws IOException, ClassNotFoundException {
-        
+
         // Read from stream
         ObjectStreamClass result = super.readClassDescriptor();
 

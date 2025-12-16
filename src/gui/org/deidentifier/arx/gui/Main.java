@@ -17,9 +17,6 @@
 
 package org.deidentifier.arx.gui;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -115,13 +112,13 @@ public class Main {
                         display.sleep();
                     }
                 } catch (final Exception e) {
-                    
-                    // Error handling
+
+                    // Error handling - show user-friendly message, log details internally
                     main.showErrorDialog(Resources.getMessage("MainWindow.9") + Resources.getMessage("MainWindow.10"), e); //$NON-NLS-1$ //$NON-NLS-2$
-                    StringWriter sw = new StringWriter();
-                    PrintWriter pw = new PrintWriter(sw);
-                    e.printStackTrace(pw);
-                    main.getController().getResources().getLogger().info(sw.toString());
+                    // Log full stack trace internally for debugging (not exposed to user)
+                    java.io.StringWriter sw = new java.io.StringWriter();
+                    e.printStackTrace(new java.io.PrintWriter(sw));
+                    main.getController().getResources().getLogger().info("Internal error: " + sw.toString());
                 }
             }
             
@@ -133,14 +130,11 @@ public class Main {
 
             // Error handling outside of SWT
             if (splash != null) splash.hide();
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            e.printStackTrace(pw);
-            final String trace = sw.toString();
 
-            // Show message
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(null, trace, "Unexpected error", JOptionPane.ERROR_MESSAGE); //$NON-NLS-1$
+            // Show user-friendly error message without exposing internal details
+            String userMessage = "An unexpected error occurred. Please restart the application.\n" +
+                                 "Error type: " + e.getClass().getSimpleName();
+            JOptionPane.showMessageDialog(null, userMessage, "Unexpected error", JOptionPane.ERROR_MESSAGE); //$NON-NLS-1$
             System.exit(1);
         }
     }

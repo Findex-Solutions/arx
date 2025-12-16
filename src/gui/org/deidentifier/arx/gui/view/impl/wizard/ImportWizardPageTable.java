@@ -315,31 +315,36 @@ public class ImportWizardPageTable extends WizardPage {
     
     /**
      * Gets the number of rows for given table
-     * 
+     *
      * This uses the JDBC connection {@link ImportWizardModel#getJdbcConnection()} to determine the number of
      * rows for given table.
-     * 
+     *
      * @param table
      *            Table number of rows should be returned for
-     * 
+     *
      * @return Number of rows for given table, -1 in case of error
      */
     private long getNumberOfRows(String table) {
-        
+
         Statement statement = null;
         ResultSet resultSet = null;
-        
+
         try {
-            statement = wizardImport.getData()
-                                    .getJdbcConnection()
-                                    .createStatement();
-            statement.execute("SELECT COUNT(*) FROM " + table); //$NON-NLS-1$
+            // Validate table name to prevent SQL injection
+            if (!IOUtil.isValidSqlIdentifier(table)) {
+                return -1L;
+            }
+            Connection connection = wizardImport.getData().getJdbcConnection();
+            String quotedTable = IOUtil.quoteSqlIdentifier(connection, table);
+
+            statement = connection.createStatement();
+            statement.execute("SELECT COUNT(*) FROM " + quotedTable); //$NON-NLS-1$
             resultSet = statement.getResultSet();
-            
+
             if (resultSet.next()) {
                 return resultSet.getLong(1);
             }
-            
+
         } catch (SQLException e) {
             /* Ignore silently */
         } finally {
@@ -358,7 +363,7 @@ public class ImportWizardPageTable extends WizardPage {
                 /* Ignore silently */
             }
         }
-        
+
         return -1L;
     }
     
@@ -415,23 +420,30 @@ public class ImportWizardPageTable extends WizardPage {
     
     /**
      * Reads in the preview data for currently selected table
-     * 
+     *
      * If this can be performed successful, the preview data will be made
      * available for the following pages by {@link ImportWizardModel#setPreviewData(List)}.
      * Otherwise an appropriate error message is set.
      */
     private boolean readPreview() {
-        
+
         String selectedTable = wizardImport.getData().getSelectedJdbcTable();
         Connection connection = wizardImport.getData().getJdbcConnection();
         Statement statement = null;
         ResultSet rs = null;
-        
+
         try {
-            
+
+            // Validate table name to prevent SQL injection
+            if (!IOUtil.isValidSqlIdentifier(selectedTable)) {
+                setErrorMessage(Resources.getMessage("ImportWizardPageTable.21")); //$NON-NLS-1$
+                return false;
+            }
+            String quotedTable = IOUtil.quoteSqlIdentifier(connection, selectedTable);
+
             statement = connection.createStatement();
             statement.setMaxRows(ImportWizardModel.PREVIEW_MAX_LINES);
-            statement.execute("SELECT * FROM " + selectedTable); //$NON-NLS-1$
+            statement.execute("SELECT * FROM " + quotedTable); //$NON-NLS-1$
             rs = statement.getResultSet();
             
             List<String[]> previewData = new ArrayList<String[]>();

@@ -68,7 +68,6 @@ import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
-import org.xml.sax.helpers.XMLReaderFactory;
 
 import com.univocity.parsers.csv.CsvFormat;
 import com.univocity.parsers.csv.CsvParserSettings;
@@ -190,8 +189,8 @@ public class WorkerLoad extends Worker<Model> {
         // Clear
         model.getClipboard().clearClipboard();
 
-        // Parse
-		final XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+        // Parse using secure XMLReader to prevent XXE attacks
+        final XMLReader xmlReader = XMLHandler.createSecureXMLReader();
         final InputSource inputSource = new InputSource(new BufferedInputStream(zip.getInputStream(entry)));
         xmlReader.setContentHandler(new XMLHandler() {
             @Override
@@ -271,20 +270,21 @@ public class WorkerLoad extends Worker<Model> {
         final ZipEntry entry = zip.getEntry(prefix + "config.dat"); //$NON-NLS-1$
         if (entry == null) { return; }
 
-        // Read config
-        final ObjectInputStream oos = new ObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        final ModelConfiguration config = (ModelConfiguration) oos.readObject();
-        
+        // Read config using secure ObjectInputStream to prevent deserialization attacks
+        final ModelConfiguration config;
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            config = (ModelConfiguration) oos.readObject();
+        }
+
         // Convert metric from v1 to v2
-        config.setMetric(Metric.createMetric(config.getMetric(), 
-                                             ARXLattice.getDeserializationContext().minLevel, 
+        config.setMetric(Metric.createMetric(config.getMetric(),
+                                             ARXLattice.getDeserializationContext().minLevel,
                                              ARXLattice.getDeserializationContext().maxLevel));
-        
-        config.getConfig().setQualityModel(Metric.createMetric(config.getConfig().getQualityModel(), 
-                                                         ARXLattice.getDeserializationContext().minLevel, 
+
+        config.getConfig().setQualityModel(Metric.createMetric(config.getConfig().getQualityModel(),
+                                                         ARXLattice.getDeserializationContext().minLevel,
                                                          ARXLattice.getDeserializationContext().maxLevel));
-        
-        oos.close();
 
         // Attach data
         if (!output) {
@@ -388,11 +388,11 @@ public class WorkerLoad extends Worker<Model> {
         final ZipEntry entry = zip.getEntry(prefix + "definition.xml"); //$NON-NLS-1$
         if (entry == null) { return; }
 
-        // Read xml
-		final XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+        // Read xml using secure XMLReader to prevent XXE attacks
+        final XMLReader xmlReader = XMLHandler.createSecureXMLReader();
         final InputSource inputSource = new InputSource(new BufferedInputStream(zip.getInputStream(entry)));
         xmlReader.setContentHandler(new XMLHandler() {
-        	
+
             String attr, dtype, atype, ref, min, max, format, locale, response;
 
             @Override
@@ -658,12 +658,13 @@ public class WorkerLoad extends Worker<Model> {
     private void readFilter(final ZipFile zip) throws SAXException,
                                               IOException,
                                               ClassNotFoundException {
-        // Read filter
+        // Read filter using secure ObjectInputStream to prevent deserialization attacks
         final ZipEntry entry = zip.getEntry("filter.dat"); //$NON-NLS-1$
         if (entry == null) { return; }
-        final ObjectInputStream oos = new ObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        model.setNodeFilter((ModelNodeFilter) oos.readObject());
-        oos.close();
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            model.setNodeFilter((ModelNodeFilter) oos.readObject());
+        }
     }
 
     /**
@@ -762,14 +763,15 @@ public class WorkerLoad extends Worker<Model> {
         ZipEntry entry = zip.getEntry("infoloss.dat"); //$NON-NLS-1$
         if (entry == null) { return null; }
 
-        // Read infoloss
+        // Read infoloss using secure ObjectInputStream to prevent deserialization attacks
         final Map<Integer, InformationLoss<?>> max;
         final Map<Integer, InformationLoss<?>> min;
-        ObjectInputStream oos = new ObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        min = (Map<Integer, InformationLoss<?>>) oos.readObject();
-        max = (Map<Integer, InformationLoss<?>>) oos.readObject();
-        oos.close();
-        
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            min = (Map<Integer, InformationLoss<?>>) oos.readObject();
+            max = (Map<Integer, InformationLoss<?>>) oos.readObject();
+        }
+
         // Create deserialization context
         final int[] minMax = readMinMax(zip);
         ARXLattice.getDeserializationContext().minLevel = minMax[0];
@@ -779,19 +781,22 @@ public class WorkerLoad extends Worker<Model> {
         entry = zip.getEntry("attributes.dat"); //$NON-NLS-1$
         if (entry == null) { throw new IOException(Resources.getMessage("WorkerLoad.6")); } //$NON-NLS-1$
 
-        // Read attributes
+        // Read attributes using secure ObjectInputStream to prevent deserialization attacks
         final Map<Integer, Map<Integer, Object>> attrs;
-        oos = new ObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        attrs = (Map<Integer, Map<Integer, Object>>) oos.readObject();
-        oos.close();
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            attrs = (Map<Integer, Map<Integer, Object>>) oos.readObject();
+        }
 
-        // Read lattice skeleton
+        // Read lattice skeleton using secure ObjectInputStream to prevent deserialization attacks
         entry = zip.getEntry("lattice.dat"); //$NON-NLS-1$
         if (entry == null) { throw new IOException(Resources.getMessage("WorkerLoad.8")); } //$NON-NLS-1$
-        oos = new ObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        lattice = (ARXLattice) oos.readObject();
-        final Map<String, Integer> headermap = (Map<String, Integer>) oos.readObject();
-        oos.close();
+        final Map<String, Integer> headermap;
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            lattice = (ARXLattice) oos.readObject();
+            headermap = (Map<String, Integer>) oos.readObject();
+        }
 
         final Map<Integer, List<ARXNode>> levels = new HashMap<Integer, List<ARXNode>>();
 
@@ -800,7 +805,8 @@ public class WorkerLoad extends Worker<Model> {
         if (entry == null) { throw new IOException(Resources.getMessage("WorkerLoad.7")); } //$NON-NLS-1$
 
         final Map<Integer, ARXNode> map = new HashMap<Integer, ARXNode>();
-		XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+        // Use secure XMLReader to prevent XXE attacks
+        XMLReader xmlReader = XMLHandler.createSecureXMLReader();
         InputSource inputSource = new InputSource(new BufferedInputStream(zip.getInputStream(entry)));
         xmlReader.setContentHandler(new XMLHandler() {
 
@@ -884,10 +890,11 @@ public class WorkerLoad extends Worker<Model> {
 
         // Read the lattice for the second time
         entry = zip.getEntry("lattice.xml"); //$NON-NLS-1$
-        xmlReader = XMLReaderFactory.createXMLReader();
+        // Use secure XMLReader to prevent XXE attacks
+        xmlReader = XMLHandler.createSecureXMLReader();
         inputSource = new InputSource(new BufferedInputStream(zip.getInputStream(entry)));
         xmlReader.setContentHandler(new XMLHandler() {
-        	
+
             private int                 id;
             private final List<ARXNode> predecessors = new ArrayList<ARXNode>();
             private final List<ARXNode> successors   = new ArrayList<ARXNode>();
@@ -1010,11 +1017,11 @@ public class WorkerLoad extends Worker<Model> {
         final ZipEntry entry = zip.getEntry("metadata.xml"); //$NON-NLS-1$
         if (entry == null) { throw new IOException(Resources.getMessage("WorkerLoad.9")); } //$NON-NLS-1$
 
-        // Read vocabulary
-		final XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+        // Read vocabulary using secure XMLReader to prevent XXE attacks
+        final XMLReader xmlReader = XMLHandler.createSecureXMLReader();
         final InputSource inputSource = new InputSource(new BufferedInputStream(zip.getInputStream(entry)));
         xmlReader.setContentHandler(new XMLHandler() {
-            
+
             Vocabulary_V2 vocabulary = new Vocabulary_V2();
             String version = null;
             String vocabularyVersion = null;
@@ -1076,9 +1083,9 @@ public class WorkerLoad extends Worker<Model> {
 
         // The result
         final int[] result = new int[]{Integer.MAX_VALUE, 0};
-        
-        // Read
-		final XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+
+        // Read using secure XMLReader to prevent XXE attacks
+        final XMLReader xmlReader = XMLHandler.createSecureXMLReader();
         InputSource inputSource = new InputSource(new BufferedInputStream(zip.getInputStream(entry)));
         xmlReader.setContentHandler(new XMLHandler() {
             

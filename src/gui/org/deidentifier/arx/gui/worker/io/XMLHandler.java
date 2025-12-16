@@ -20,7 +20,9 @@ package org.deidentifier.arx.gui.worker.io;
 import org.deidentifier.arx.gui.resources.Resources;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
+import org.xml.sax.helpers.XMLReaderFactory;
 
 import com.carrotsearch.hppc.CharArrayList;
 
@@ -31,6 +33,60 @@ import com.carrotsearch.hppc.CharArrayList;
  * @author Florian Kohlmayer
  */
 public abstract class XMLHandler extends DefaultHandler {
+
+    /**
+     * Creates a secure XMLReader with XXE (XML External Entity) protection enabled.
+     * This method disables external entity processing to prevent XXE attacks.
+     *
+     * @return A secure XMLReader instance
+     * @throws SAXException if the XMLReader cannot be created or configured
+     */
+    public static XMLReader createSecureXMLReader() throws SAXException {
+        XMLReader xmlReader = XMLReaderFactory.createXMLReader();
+
+        // Track if we successfully applied at least one critical protection
+        boolean hasProtection = false;
+
+        // Disable DTDs (doctypes) entirely - this is the most important protection
+        try {
+            xmlReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            hasProtection = true;
+        } catch (SAXException e) {
+            // Feature may not be supported by all parsers, try alternative protections
+        }
+
+        // Disable external general entities
+        try {
+            xmlReader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            hasProtection = true;
+        } catch (SAXException e) {
+            // Feature may not be supported
+        }
+
+        // Disable external parameter entities
+        try {
+            xmlReader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            hasProtection = true;
+        } catch (SAXException e) {
+            // Feature may not be supported
+        }
+
+        // Disable external DTDs
+        try {
+            xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            hasProtection = true;
+        } catch (SAXException e) {
+            // Feature may not be supported
+        }
+
+        // Ensure at least one protection was applied
+        if (!hasProtection) {
+            throw new SAXException("Unable to configure XMLReader with XXE protection. " +
+                "No security features could be set on the parser.");
+        }
+
+        return xmlReader;
+    }
 
     /**  The payload */
     public String payload;
