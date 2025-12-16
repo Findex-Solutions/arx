@@ -44,17 +44,23 @@ public class BackwardsCompatibleObjectInputStream extends ObjectInputStream {
         "java.util.",
         "java.io.",
         "java.math.",
-        "java.time.",
-        "[L",  // Array types
-        "[I",  // int arrays
-        "[D",  // double arrays
-        "[B",  // byte arrays
-        "[Z",  // boolean arrays
-        "[C",  // char arrays
-        "[S",  // short arrays
-        "[J",  // long arrays
-        "[F"   // float arrays
+        "java.time."
     };
+
+    /**
+     * Allowed primitive array type descriptors.
+     * These are single-character codes used in Java serialization for primitive arrays.
+     */
+    private static final Set<String> ALLOWED_PRIMITIVE_ARRAYS = new HashSet<String>(Arrays.asList(
+        "[I",  // int[]
+        "[D",  // double[]
+        "[B",  // byte[]
+        "[Z",  // boolean[]
+        "[C",  // char[]
+        "[S",  // short[]
+        "[J",  // long[]
+        "[F"   // float[]
+    ));
 
     /**
      * Set of explicitly allowed classes that don't match package prefixes
@@ -137,11 +143,45 @@ public class BackwardsCompatibleObjectInputStream extends ObjectInputStream {
             return true;
         }
 
-        // Check package prefixes
+        // Handle array types
+        if (className.startsWith("[")) {
+            return isArrayTypeAllowed(className);
+        }
+
+        // Check package prefixes for regular classes
         for (String prefix : ALLOWED_PACKAGE_PREFIXES) {
             if (className.startsWith(prefix)) {
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if an array type is allowed to be deserialized.
+     * Handles primitive arrays, object arrays, and multi-dimensional arrays.
+     *
+     * @param className The array type descriptor (e.g., "[I", "[Ljava.lang.String;", "[[D")
+     * @return true if the array type is allowed, false otherwise
+     */
+    private boolean isArrayTypeAllowed(String className) {
+        // Primitive arrays (e.g., "[I" for int[], "[D" for double[])
+        if (ALLOWED_PRIMITIVE_ARRAYS.contains(className)) {
+            return true;
+        }
+
+        // Multi-dimensional arrays - recursively check the component type
+        if (className.startsWith("[[")) {
+            return isArrayTypeAllowed(className.substring(1));
+        }
+
+        // Object arrays (e.g., "[Ljava.lang.String;" for String[])
+        if (className.startsWith("[L") && className.endsWith(";")) {
+            // Extract the element class name (between "[L" and ";")
+            String elementClass = className.substring(2, className.length() - 1);
+            // Recursively check if the element type is allowed
+            return isClassAllowed(elementClass);
         }
 
         return false;

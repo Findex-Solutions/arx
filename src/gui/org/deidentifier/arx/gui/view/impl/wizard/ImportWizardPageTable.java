@@ -334,11 +334,10 @@ public class ImportWizardPageTable extends WizardPage {
             if (!IOUtil.isValidSqlIdentifier(table)) {
                 return -1L;
             }
-            String quotedTable = IOUtil.quoteSqlIdentifier(table);
+            Connection connection = wizardImport.getData().getJdbcConnection();
+            String quotedTable = IOUtil.quoteSqlIdentifier(connection, table);
 
-            statement = wizardImport.getData()
-                                    .getJdbcConnection()
-                                    .createStatement();
+            statement = connection.createStatement();
             statement.execute("SELECT COUNT(*) FROM " + quotedTable); //$NON-NLS-1$
             resultSet = statement.getResultSet();
 
@@ -440,7 +439,7 @@ public class ImportWizardPageTable extends WizardPage {
                 setErrorMessage(Resources.getMessage("ImportWizardPageTable.21")); //$NON-NLS-1$
                 return false;
             }
-            String quotedTable = IOUtil.quoteSqlIdentifier(selectedTable);
+            String quotedTable = IOUtil.quoteSqlIdentifier(connection, selectedTable);
 
             statement = connection.createStatement();
             statement.setMaxRows(ImportWizardModel.PREVIEW_MAX_LINES);

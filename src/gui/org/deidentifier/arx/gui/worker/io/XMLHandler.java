@@ -44,16 +44,21 @@ public abstract class XMLHandler extends DefaultHandler {
     public static XMLReader createSecureXMLReader() throws SAXException {
         XMLReader xmlReader = XMLReaderFactory.createXMLReader();
 
-        // Disable DTDs (doctypes) entirely
+        // Track if we successfully applied at least one critical protection
+        boolean hasProtection = false;
+
+        // Disable DTDs (doctypes) entirely - this is the most important protection
         try {
             xmlReader.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            hasProtection = true;
         } catch (SAXException e) {
-            // Feature may not be supported by all parsers, continue with other protections
+            // Feature may not be supported by all parsers, try alternative protections
         }
 
         // Disable external general entities
         try {
             xmlReader.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            hasProtection = true;
         } catch (SAXException e) {
             // Feature may not be supported
         }
@@ -61,6 +66,7 @@ public abstract class XMLHandler extends DefaultHandler {
         // Disable external parameter entities
         try {
             xmlReader.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            hasProtection = true;
         } catch (SAXException e) {
             // Feature may not be supported
         }
@@ -68,8 +74,15 @@ public abstract class XMLHandler extends DefaultHandler {
         // Disable external DTDs
         try {
             xmlReader.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            hasProtection = true;
         } catch (SAXException e) {
             // Feature may not be supported
+        }
+
+        // Ensure at least one protection was applied
+        if (!hasProtection) {
+            throw new SAXException("Unable to configure XMLReader with XXE protection. " +
+                "No security features could be set on the parser.");
         }
 
         return xmlReader;

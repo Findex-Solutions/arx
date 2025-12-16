@@ -92,7 +92,7 @@ public class ImportAdapterJDBC extends ImportAdapter {
             if (!IOUtil.validateTableExists(config.getConnection(), tableName)) {
                 throw new IOException("Invalid or non-existent table: " + tableName);
             }
-            String quotedTable = IOUtil.quoteSqlIdentifier(tableName);
+            String quotedTable = IOUtil.quoteSqlIdentifier(config.getConnection(), tableName);
 
             /* Used to keep track of progress */
             statement = config.getConnection().createStatement();

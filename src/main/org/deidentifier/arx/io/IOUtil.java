@@ -85,19 +85,78 @@ public class IOUtil {
 
         // Check if table exists using database metadata
         DatabaseMetaData metaData = connection.getMetaData();
+
+        // Normalize schema and table names according to database identifier case rules
+        schema = normalizeIdentifierCase(metaData, schema);
+        table = normalizeIdentifierCase(metaData, table);
+
         try (ResultSet tables = metaData.getTables(null, schema, table, new String[]{"TABLE", "VIEW"})) {
             return tables.next();
         }
     }
 
     /**
+     * Normalizes an identifier according to the database's case handling rules.
+     *
+     * @param metaData The database metadata
+     * @param identifier The identifier to normalize (may be null)
+     * @return The normalized identifier, or null if input was null
+     * @throws SQLException if a database access error occurs
+     */
+    private static String normalizeIdentifierCase(DatabaseMetaData metaData, String identifier) throws SQLException {
+        if (identifier == null) {
+            return null;
+        }
+        if (metaData.storesUpperCaseIdentifiers()) {
+            return identifier.toUpperCase();
+        } else if (metaData.storesLowerCaseIdentifiers()) {
+            return identifier.toLowerCase();
+        }
+        // If mixed case, leave as is
+        return identifier;
+    }
+
+    /**
+     * Quotes a SQL identifier to make it safe for use in queries.
+     * Uses the database-specific quote character when a connection is provided.
+     *
+     * @param connection The database connection (used to determine quote character)
+     * @param identifier The identifier to quote
+     * @return The quoted identifier
+     * @throws IllegalArgumentException if the identifier is invalid
+     * @throws SQLException if a database access error occurs
+     */
+    public static String quoteSqlIdentifier(Connection connection, String identifier) throws SQLException {
+        if (!isValidSqlIdentifier(identifier)) {
+            throw new IllegalArgumentException("Invalid SQL identifier: " + identifier);
+        }
+
+        // Get the database-specific quote string
+        String quote = connection.getMetaData().getIdentifierQuoteString();
+        if (quote == null || quote.trim().isEmpty() || " ".equals(quote)) {
+            // Fallback to double quotes (ANSI SQL) if quote string is not provided
+            quote = "\"";
+        }
+
+        // Handle schema.table format
+        if (identifier.contains(".")) {
+            String[] parts = identifier.split("\\.", 2);
+            return quote + parts[0] + quote + "." + quote + parts[1] + quote;
+        }
+
+        return quote + identifier + quote;
+    }
+
+    /**
      * Quotes a SQL identifier to make it safe for use in queries.
      * Uses double quotes which is ANSI SQL standard.
      *
+     * @deprecated Use {@link #quoteSqlIdentifier(Connection, String)} for database-specific quoting
      * @param identifier The identifier to quote
      * @return The quoted identifier
      * @throws IllegalArgumentException if the identifier is invalid
      */
+    @Deprecated
     public static String quoteSqlIdentifier(String identifier) {
         if (!isValidSqlIdentifier(identifier)) {
             throw new IllegalArgumentException("Invalid SQL identifier: " + identifier);

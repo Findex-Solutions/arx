@@ -115,8 +115,10 @@ public class Main {
 
                     // Error handling - show user-friendly message, log details internally
                     main.showErrorDialog(Resources.getMessage("MainWindow.9") + Resources.getMessage("MainWindow.10"), e); //$NON-NLS-1$ //$NON-NLS-2$
-                    // Log full stack trace internally only (not exposed to user)
-                    main.getController().getResources().getLogger().info("Internal error: " + e.getClass().getName() + ": " + e.getMessage());
+                    // Log full stack trace internally for debugging (not exposed to user)
+                    java.io.StringWriter sw = new java.io.StringWriter();
+                    e.printStackTrace(new java.io.PrintWriter(sw));
+                    main.getController().getResources().getLogger().info("Internal error: " + sw.toString());
                 }
             }
             

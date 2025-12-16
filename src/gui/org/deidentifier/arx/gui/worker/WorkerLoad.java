@@ -271,19 +271,20 @@ public class WorkerLoad extends Worker<Model> {
         if (entry == null) { return; }
 
         // Read config using secure ObjectInputStream to prevent deserialization attacks
-        final ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        final ModelConfiguration config = (ModelConfiguration) oos.readObject();
-        
+        final ModelConfiguration config;
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            config = (ModelConfiguration) oos.readObject();
+        }
+
         // Convert metric from v1 to v2
-        config.setMetric(Metric.createMetric(config.getMetric(), 
-                                             ARXLattice.getDeserializationContext().minLevel, 
+        config.setMetric(Metric.createMetric(config.getMetric(),
+                                             ARXLattice.getDeserializationContext().minLevel,
                                              ARXLattice.getDeserializationContext().maxLevel));
-        
-        config.getConfig().setQualityModel(Metric.createMetric(config.getConfig().getQualityModel(), 
-                                                         ARXLattice.getDeserializationContext().minLevel, 
+
+        config.getConfig().setQualityModel(Metric.createMetric(config.getConfig().getQualityModel(),
+                                                         ARXLattice.getDeserializationContext().minLevel,
                                                          ARXLattice.getDeserializationContext().maxLevel));
-        
-        oos.close();
 
         // Attach data
         if (!output) {
@@ -660,9 +661,10 @@ public class WorkerLoad extends Worker<Model> {
         // Read filter using secure ObjectInputStream to prevent deserialization attacks
         final ZipEntry entry = zip.getEntry("filter.dat"); //$NON-NLS-1$
         if (entry == null) { return; }
-        final ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        model.setNodeFilter((ModelNodeFilter) oos.readObject());
-        oos.close();
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            model.setNodeFilter((ModelNodeFilter) oos.readObject());
+        }
     }
 
     /**
@@ -764,11 +766,12 @@ public class WorkerLoad extends Worker<Model> {
         // Read infoloss using secure ObjectInputStream to prevent deserialization attacks
         final Map<Integer, InformationLoss<?>> max;
         final Map<Integer, InformationLoss<?>> min;
-        ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        min = (Map<Integer, InformationLoss<?>>) oos.readObject();
-        max = (Map<Integer, InformationLoss<?>>) oos.readObject();
-        oos.close();
-        
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            min = (Map<Integer, InformationLoss<?>>) oos.readObject();
+            max = (Map<Integer, InformationLoss<?>>) oos.readObject();
+        }
+
         // Create deserialization context
         final int[] minMax = readMinMax(zip);
         ARXLattice.getDeserializationContext().minLevel = minMax[0];
@@ -780,17 +783,20 @@ public class WorkerLoad extends Worker<Model> {
 
         // Read attributes using secure ObjectInputStream to prevent deserialization attacks
         final Map<Integer, Map<Integer, Object>> attrs;
-        oos = new BackwardsCompatibleObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        attrs = (Map<Integer, Map<Integer, Object>>) oos.readObject();
-        oos.close();
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            attrs = (Map<Integer, Map<Integer, Object>>) oos.readObject();
+        }
 
         // Read lattice skeleton using secure ObjectInputStream to prevent deserialization attacks
         entry = zip.getEntry("lattice.dat"); //$NON-NLS-1$
         if (entry == null) { throw new IOException(Resources.getMessage("WorkerLoad.8")); } //$NON-NLS-1$
-        oos = new BackwardsCompatibleObjectInputStream(new BufferedInputStream(zip.getInputStream(entry)));
-        lattice = (ARXLattice) oos.readObject();
-        final Map<String, Integer> headermap = (Map<String, Integer>) oos.readObject();
-        oos.close();
+        final Map<String, Integer> headermap;
+        try (BufferedInputStream bis = new BufferedInputStream(zip.getInputStream(entry));
+             ObjectInputStream oos = new BackwardsCompatibleObjectInputStream(bis)) {
+            lattice = (ARXLattice) oos.readObject();
+            headermap = (Map<String, Integer>) oos.readObject();
+        }
 
         final Map<Integer, List<ARXNode>> levels = new HashMap<Integer, List<ARXNode>>();
 
