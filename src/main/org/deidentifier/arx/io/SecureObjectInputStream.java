@@ -43,6 +43,7 @@ public class SecureObjectInputStream extends ObjectInputStream {
      */
     private static final String[] ALLOWED_PACKAGE_PREFIXES = {
         "org.deidentifier.arx.",
+        "de.linearbits.",          // ARX ecosystem libraries (newtonraphson, etc.)
         "java.lang.",
         "java.util.",
         "java.io.",
