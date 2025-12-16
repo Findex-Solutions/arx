@@ -77,37 +77,44 @@ public class ImportAdapterJDBC extends ImportAdapter {
      * @todo Fix IOException
      */
     protected ImportAdapterJDBC(ImportConfigurationJDBC config) throws IOException {
-        
+
         super(config);
         this.config = config;
-        
+
         /* Preparation work */
         indexes = getIndexesToImport();
         dataTypes = getColumnDatatypes();
-        
+
         try {
-            
+
+            // Validate table name to prevent SQL injection
+            String tableName = config.getTable();
+            if (!IOUtil.validateTableExists(config.getConnection(), tableName)) {
+                throw new IOException("Invalid or non-existent table: " + tableName);
+            }
+            String quotedTable = IOUtil.quoteSqlIdentifier(tableName);
+
             /* Used to keep track of progress */
             statement = config.getConnection().createStatement();
-            statement.execute("SELECT COUNT(*) FROM " + config.getTable());
+            statement.execute("SELECT COUNT(*) FROM " + quotedTable);
             resultSet = statement.getResultSet();
-            
+
             if (resultSet.next()) {
-                
+
                 totalRows = resultSet.getInt(1);
                 if (totalRows == 0) {
                     closeResources();
                     throw new IOException("Table doesn't contain any rows");
                 }
-                
+
             } else {
                 closeResources();
                 throw new IOException("Couldn't determine number of rows");
             }
-            
+
             /* Query for actual data */
             statement = config.getConnection().createStatement();
-            statement.execute("SELECT * FROM " + config.getTable());
+            statement.execute("SELECT * FROM " + quotedTable);
             resultSet = statement.getResultSet();
             hasNext = resultSet.next();
             

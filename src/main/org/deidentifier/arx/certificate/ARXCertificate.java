@@ -212,26 +212,47 @@ public class ARXCertificate { // NO_UCD
      * @throws IOException 
      */
     public void save(OutputStream stream) throws IOException {
-        
+
         // Render
         Document document = new Document(style.gethMargin(), style.gethMargin(), style.getvMargin(), style.getvMargin());
         for (Element element : this.elements) {
             element.render(document, 0, this.style);
         }
-        
-        // Save to temp file
+
+        // Save to temp file with secure handling
         File tmp = File.createTempFile("arx", "certificate");
-        document.save(tmp);
-        
-        // Load and watermark
-        PDDocument pdDocument = PDDocument.load(tmp);
-        Watermark watermark = new Watermark(pdDocument);
-        watermark.mark(pdDocument);
-        
-        // Save
-        pdDocument.save(stream);
-        pdDocument.close();
-        tmp.delete();
+        PDDocument pdDocument = null;
+        try {
+            // Set restrictive permissions on temp file (best effort on supported platforms)
+            tmp.setReadable(false, false);
+            tmp.setReadable(true, true);
+            tmp.setWritable(false, false);
+            tmp.setWritable(true, true);
+
+            document.save(tmp);
+
+            // Load and watermark
+            pdDocument = PDDocument.load(tmp);
+            Watermark watermark = new Watermark(pdDocument);
+            watermark.mark(pdDocument);
+
+            // Save
+            pdDocument.save(stream);
+        } finally {
+            // Ensure resources are closed
+            if (pdDocument != null) {
+                try {
+                    pdDocument.close();
+                } catch (IOException e) {
+                    // Ignore close errors
+                }
+            }
+            // Ensure temp file is deleted
+            if (tmp.exists() && !tmp.delete()) {
+                // Schedule for deletion on JVM exit if immediate deletion fails
+                tmp.deleteOnExit();
+            }
+        }
     }
     
 	/**
