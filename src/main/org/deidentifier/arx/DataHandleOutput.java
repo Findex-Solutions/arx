@@ -23,6 +23,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.security.SecureRandom;
+
+import org.deidentifier.arx.io.SecureObjectInputStream;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -194,8 +196,8 @@ public class DataHandleOutput extends DataHandle {
                                final DataDefinition definition,
                                final ARXConfiguration config) throws ClassNotFoundException, IOException {
         
-        // Read data from stream
-        ObjectInputStream ois = new ObjectInputStream(stream);
+        // Read data from stream using secure deserialization to prevent attacks
+        ObjectInputStream ois = new SecureObjectInputStream(stream);
         Data outputGeneralized = (Data) ois.readObject();
         Data outputMicroaggregated = (Data) ois.readObject();
         DataType<?>[] dataTypes = (DataType<?>[]) ois.readObject();
